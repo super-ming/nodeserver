@@ -4,6 +4,9 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const mongoose = require('mongoose');
+const session = require('express-session');
+//file store creates a session folder and keep track of session info
+let FileStore = require('session-file-store')(session);
 
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
@@ -32,12 +35,21 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 //assign cookie secret key
-app.use(cookieParser('12345'));
+//app.use(cookieParser('12345'));
+//set up session to replace cookie
+app.use(session({
+  name: 'session-id',
+  secret: '12345',
+  saveUninitialized: false,
+  resave: false,
+  store: new FileStore()
+}));
+
 //add authentication before we allow users to fetch data from server
 auth = (req, res, next) => {
-  console.log(req.signedCookies);
-  //if no user in signedCookies, then user has not been authenticated yet
-  if (!req.signedCookies.user){
+  console.log(req.session);
+  //if no user in session, then user has not been authenticated yet
+  if (!req.session.user){
     let authHeader = req.headers.authorization;
     if (!authHeader) {
       let err = new Error('You are not authenticated!');
@@ -50,10 +62,10 @@ auth = (req, res, next) => {
     let auth = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
     let user = auth[0];
     let password = auth[1];
-    //if authentication is successful, add a cookie
+    //if authentication is successful, add an user to session
     if (user === 'admin' && password === 'password') {
       //go to next middleware
-      res.cookie('user', 'admin', { signed: true })
+      req.session.user = 'admin';
       next();
     } else {
       let err = new Error('You are not authenticated!');
@@ -62,7 +74,7 @@ auth = (req, res, next) => {
       return next(err);
     }
   } else {
-    if(req.signedCookies.user === 'admin') {
+    if(req.session.user === 'admin') {
       next();
     } else {
       let err = new Error('You are not authenticated!');
