@@ -6,7 +6,9 @@ const logger = require('morgan');
 const mongoose = require('mongoose');
 const session = require('express-session');
 //file store creates a session folder and keep track of session info
-let FileStore = require('session-file-store')(session);
+const FileStore = require('session-file-store')(session);
+const passport = require('passport');
+const authenticate = require('./authenticate');
 
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
@@ -45,28 +47,24 @@ app.use(session({
   store: new FileStore()
 }));
 
+//detect if user is already logged in. If so, add session
+app.use(passport.initialize());
+app.use(passport.session());
 //these endpoints should be public so need to put it before authentication
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
 //add authentication before we allow users to fetch data from server
 auth = (req, res, next) => {
-  console.log(req.session);
   //if no user in session, then user has not been authenticated yet
-  if (!req.session.user){
+  if (!req.user){
     let err = new Error('You are not authenticated!');
-    err.status = 401;
-    return next(err);
+    err.status = 403;
+    next(err);
   } else {
-    if(req.session.user === 'authenticated') {
-      next();
-    } else {
-      let err = new Error('You are not authenticated!');
-      err.status = 403;
-      return next(err);
-    }
+    next();
   }
-}
+};
 //protect the endpoints below so that they can only be accessed if authenticated
 app.use(auth);
 //enables app to serve static files from public
