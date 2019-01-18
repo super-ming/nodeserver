@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const User = require('../models/user');
 const router = express.Router();
 const passport = require('passport');
+const authenticate = require('../authenticate');
 
 router.use(bodyParser.json())
 
@@ -32,11 +33,13 @@ router.post('/signup', (req, res, next) => {
   });
 });
 
-//if authenticated, passport automatically adds user property to req
+//if authenticated, passport automatically adds user property to req so you can then use req.user
 router.post('/login', passport.authenticate('local'),(req, res) => {
+  //create token by searching for user by id in database
+  let token = authenticate.getToken({_id: req.user._id})
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');
-  res.json({success: true, status: 'You\'re successfully logged in!'});
+  res.json({success: true, token: token, status: 'You\'re successfully logged in!'});
 });
 
 //use get instead of post because user doesn't need to supply any info in the body of the message

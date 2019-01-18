@@ -9,6 +9,7 @@ const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const passport = require('passport');
 const authenticate = require('./authenticate');
+const config = require('./config');
 
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
@@ -19,8 +20,8 @@ const leaderRouter = require('./routes/leaderRouter');
 const app = express();
 
 const Dishes = require('./models/dishes');
-const url = 'mongodb://localhost:27017/conFusion';
-const connect = mongoose.connect(url);
+const url = config.mongoUrl;
+const connect = mongoose.connect(url, { useNewUrlParser: true });
 
 connect.then(db=> {
   console.log('Connected to server');
@@ -36,37 +37,12 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-//assign cookie secret key
-//app.use(cookieParser('12345'));
-//set up session to replace cookie
-app.use(session({
-  name: 'session-id',
-  secret: '12345',
-  saveUninitialized: false,
-  resave: false,
-  store: new FileStore()
-}));
 
-//detect if user is already logged in. If so, add session
 app.use(passport.initialize());
-app.use(passport.session());
-//these endpoints should be public so need to put it before authentication
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
-//add authentication before we allow users to fetch data from server
-auth = (req, res, next) => {
-  //if no user in session, then user has not been authenticated yet
-  if (!req.user){
-    let err = new Error('You are not authenticated!');
-    err.status = 403;
-    next(err);
-  } else {
-    next();
-  }
-};
-//protect the endpoints below so that they can only be accessed if authenticated
-app.use(auth);
 //enables app to serve static files from public
 app.use(express.static(path.join(__dirname, 'public')));
 
