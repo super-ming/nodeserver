@@ -19,6 +19,15 @@ const leaderRouter = require('./routes/leaderRouter');
 
 const app = express();
 
+//if the incoming port is secured, then the secure flag will be set
+app.all('*', (req, res, next)=> {
+  if (req.secure) {
+    return next();
+  } else {
+    res.redirect(307, 'https://' + req.hostname + ':' + app.get('securePort') + req.url);
+  }
+})
+
 const Dishes = require('./models/dishes');
 const url = config.mongoUrl;
 const connect = mongoose.connect(url, { useNewUrlParser: true });
