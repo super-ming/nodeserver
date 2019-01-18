@@ -4,18 +4,19 @@ const User = require('../models/user');
 const router = express.Router();
 const passport = require('passport');
 const authenticate = require('../authenticate');
+const cors = require('./cors');
 
 router.use(bodyParser.json())
 
 /* GET users listing. */
 
 //User endpoints
-router.get('/', (req, res, next) => {
+router.get('/', cors.corsWithOptions, (req, res, next) => {
   res.send('respond with a resource');
 });
 
 //simplify authentication process with passport
-router.post('/signup', (req, res, next) => {
+router.post('/signup', cors.corsWithOptions, (req, res, next) => {
   //check if username already exists in database
   User.register(new User({username: req.body.username}), req.body.password, (err,user) => {
     if (err) {
@@ -49,7 +50,7 @@ router.post('/signup', (req, res, next) => {
 });
 
 //if authenticated, passport automatically adds user property to req so you can then use req.user
-router.post('/login', passport.authenticate('local'),(req, res) => {
+router.post('/login', cors.corsWithOptions, passport.authenticate('local'),(req, res) => {
   //create token by searching for user by id in database
   let token = authenticate.getToken({_id: req.user._id})
   res.statusCode = 200;
@@ -58,7 +59,7 @@ router.post('/login', passport.authenticate('local'),(req, res) => {
 });
 
 //use get instead of post because user doesn't need to supply any info in the body of the message
-router.get('/logout', (req, res) => {
+router.get('/logout', cors.corsWithOptions, (req, res) => {
   //if there is a session, invalidate the session from the server
   if (req.session) {
     req.session.destroy();
