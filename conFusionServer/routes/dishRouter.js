@@ -15,7 +15,7 @@ dishRouter.route('/')
     res.sendStatus = 200;
   })
   .get(cors.cors, (req, res, next) => {
-    Dishes.find({})
+    Dishes.find(req.query)
     //use mongoose population to populate the author
     .populate('comments.author')
     .then(dish => {
@@ -82,6 +82,7 @@ dishRouter.route('/:dishId')
     }, err => next(err)).catch(err => next(err));
   });
 
+//Admin can delete dish comments
 dishRouter.route('/:dishId/comments')
   .options(cors.corsWithOptions, (req, res) => {
     res.sendStatus = 200;
@@ -186,22 +187,29 @@ dishRouter.route('/:dishId/comments/:commentId')
       // Updating a sub-document inside a document in Mongoose. Mongoose has
       // no explicit method for updating an embedded subdocument
       if (dish != null && dish.comments.id(req.params.commentId) != null) {
-        if (req.body.rating) {
-          dish.comments.id(req.params.commentId).rating = req.body.rating
-        }
-        if (req.body.comment) {
-          dish.comments.id(req.params.commentId).comment = req.body.comment
-        }
-        dish.save()
-        .then(dish => {
-          Dishes.findById(dish._id)
-          .populate('comments.author')
+        if (dish.comments.id(req.params.commentId).author.equals(req.user._id)) {
+          if (req.body.rating) {
+            dish.comments.id(req.params.commentId).rating = req.body.rating
+          }
+          if (req.body.comment) {
+            dish.comments.id(req.params.commentId).comment = req.body.comment
+          }
+          dish.save()
           .then(dish => {
-            res.statusCode = 200;
-            res.setHeader('Content-type', 'application/json');
-            res.json(dish);
-          })
-        }, err => next(err));
+            Dishes.findById(dish._id)
+            .populate('comments.author')
+            .then(dish => {
+              res.statusCode = 200;
+              res.setHeader('Content-type', 'application/json');
+              res.json(dish);
+            })
+          }, err => next(err));
+        } else {
+          err = new Error('Comment ' + req.params.commentId + ' of Dish ' + req.params.dishId +
+          ' cannot be updated by user ' + req.user._id);
+          err.statusCode = 403;
+          return next(err);
+        }
       } else if (dish == null){
         err = new Error('Dish ' + req.params.dishId + ' not found');
         err.statusCode = 404;
@@ -217,17 +225,24 @@ dishRouter.route('/:dishId/comments/:commentId')
   .delete(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
     Dishes.findById(req.params.dishId).then(dish => {
       if (dish != null  && dish.comments.id(req.params.commentId) != null) {
+        if (dish.comments.id(req.params.commentId).author.equals(req.user._id)) {
           dish.comments.id(req.params.commentId).remove();
-        dish.save()
-        .then(dish => {
-          Dishes.findById(dish._id)
-          .populate('comments.author')
+          dish.save()
           .then(dish => {
-            res.statusCode = 200;
-            res.setHeader('Content-type', 'application/json');
-            res.json(dishes.comments.id(req.params.commentId));
+            Dishes.findById(dish._id)
+            .populate('comments.author')
+            .then(dish => {
+              res.statusCode = 200;
+              res.setHeader('Content-type', 'application/json');
+              res.json(dishes.comments.id(req.params.commentId));
+            })
           })
-        })
+        } else {
+          err = new Error('Comment ' + req.params.commentId + ' of Dish ' + req.params.dishId +
+          ' cannot be removed by user ' + req.user._id);
+          err.statusCode = 403;
+          return next(err);
+        }
       } else if (dish == null){
         err = new Error('Dish ' + req.params.dishId + ' not found');
         err.statusCode = 404;
