@@ -28,7 +28,7 @@ app.all('*', (req, res, next)=> {
   } else {
     res.redirect(307, 'https://' + req.hostname + ':' + app.get('securePort') + req.url);
   }
-})
+});
 
 const Dishes = require('./models/dishes');
 const url = config.mongoUrl;

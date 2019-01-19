@@ -11,6 +11,7 @@ router.use(bodyParser.json())
 /* GET users listing. */
 
 //User endpoints
+//router.options('*', cors.corsWithOptions, (req, res) => {res.sendStatus(200)});
 router.get('/', cors.corsWithOptions, (req, res, next) => {
   res.send('respond with a resource');
 });
@@ -52,7 +53,7 @@ router.post('/signup', cors.corsWithOptions, (req, res, next) => {
 //if authenticated, passport automatically adds user property to req so you can then use req.user
 router.post('/login', cors.corsWithOptions, passport.authenticate('local'),(req, res) => {
   //create token by searching for user by id in database
-  let token = authenticate.getToken({_id: req.user._id})
+  let token = authenticate.getToken({_id: req.user._id});
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');
   res.json({success: true, token: token, status: 'You\'re successfully logged in!'});
@@ -69,6 +70,18 @@ router.get('/logout', cors.corsWithOptions, (req, res) => {
   } else {
     let err = new Error('You are not logged in!');
     err.status = 403;
+  }
+});
+
+router.get('/facebook/token', passport.authenticate('facebook-token'), (req, res)=> {
+  //if facebook authentication is successful, the user will be populated in the request
+  console.log(req);
+  if (req.user) {
+    //create JWT token and send to client. Facebook access token is no longer needed at this point
+    let token = authenticate.getToken({_id: req.user._id});
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.json({success: true, token: token, status: 'You\'re successfully logged in!'});
   }
 });
 
