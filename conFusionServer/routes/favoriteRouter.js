@@ -47,12 +47,17 @@ favoriteRouter.route('/')
 						}
 					}
 				}
-				res.statusCode = 200;
-				res.setHeader('Content-Type', 'application/json');
 				if(hasNew){
 					favorite.save()
 					.then(favorite => {
-						res.json(favorite);
+            Favorites.findById(favorite._id)
+            .populate('user')
+            .populate('dishes')
+            .then(favorites = > {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.json(favorites);
+            })
 					}, (err) => next(err));
 				}
 				else{
@@ -120,9 +125,15 @@ favoriteRouter.route('/:dishId')
 				if (favorite.dishes.indexOf(req.params.dishId) === -1) {
 					favorite.dishes.push(req.params.dishId);
 					favorite.save()
-					.then(favorite => {
-						res.json(favorite);
-					}, err => next(err));
+          .then(favorite => {
+            Favorites.findById(favorite._id)
+            .populate('user')
+            .populate('dishes')
+            .then(favorites = > {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.json(favorites);
+            }, err => next(err))
 				} else {
 					res.json(favorite);
 				}
